@@ -64,22 +64,20 @@ void server_loop(server *serv)
         } else {
             for (int i = 0; i < nclients; ++i) {
                 if (FD_ISSET(clients[i], &readfds)) {
-                    /* message msg; */
-                    /* receive_message(clients[i], &msg); */
-
-                    char *buffer;
-                    size_t nbytes = receive(clients[i], (void *) &buffer);
+                    message msg;
+                    size_t nbytes = receive_message(clients[i], &msg);
 
                     // Client sent message
-                    if (nbytes > 0) {  // closed
-                        ssend(clients[i], buffer, nbytes);
-                        free(buffer);
+                    if (nbytes > 0) {
+                        for (int j = 0; j<nclients; ++j)
+                            send_message(clients[j], &msg);
+                        free(msg.text);
 
                     // Client disconnected, remove it
                     } else {
                         close(clients[i]);
                         clients[i] = clients[nclients - 1];
-                        nclients++;
+                        --nclients;
                     }
                 }
             }

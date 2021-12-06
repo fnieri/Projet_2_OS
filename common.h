@@ -35,6 +35,16 @@ typedef struct {
 } message;
 
 /**
+ * @brief Send message
+ */
+int send_message(int sock, message *msg)
+{
+    checked(write(sock, &msg->length, sizeof(msg->length)));
+    checked(write(sock, &msg->timestamp, sizeof(msg->timestamp)));
+    return checked(write(sock, msg->text, msg->length));
+}
+
+/**
  * @brief Receive message under the form <size_t len><time_t timestamp><data...>.
  */
 int receive_message(int sock, message *msg)
@@ -71,9 +81,8 @@ int receive_message(int sock, message *msg)
     msg->length = total_received;
     msg->text = buffer;
 
-    return 0;
+    return total_received;
 }
-
 
 /**
  * @brief Receive data under the form <size_t len><data...>.
