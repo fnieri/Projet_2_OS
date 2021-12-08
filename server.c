@@ -29,16 +29,57 @@ int server_init(server *serv, int port)
     checked(bind(serv->sock, (struct sockaddr *) &serv->addr, sizeof(serv->addr)));
     checked(listen(serv->sock, 3));
 
+
+    return EXIT_SUCCESS;
+}
+
+/**
+ * @brief Add a new connected client
+ *
+ * A user shall send a username with its request for connection.
+ */
+int add_client(server * const serv, int * const clist, int * const ccount, char **cpseudo)
+{
+    size_t saddrlen = sizeof(serv->addr);
+
+    clist[*ccount] = accept(serv->sock, (struct sockaddr *) &serv->addr, (socklen_t *) &saddrlen);
+    checked(receive(clist[*ccount], (void *) &cpseudo[*ccount]));
+    ++(*ccount);
+
+    return EXIT_SUCCESS;
+}
+
+/**
+ * @brief Remove a disconnected client
+ */
+int remove_client(int * const clist, int * const ccount, int * const index)
+{
+    close(clist[*index]);
+    clist[*index] = clist[*ccount - 1];
+    --(*ccount);
+
+    return EXIT_SUCCESS;
+}
+
+/**
+ * @brief Send message to all clients
+ */
+int relay_message(int * const clist, int * const ccount, char *pseudo, message *msg)
+{
+    for (int i=0; i<*ccount; ++i)
+        send_message(clist[i], msg);
+
     return EXIT_SUCCESS;
 }
 
 void server_loop(server *serv)
 {
-    size_t addrlen = sizeof(serv->addr);
     fd_set readfds;
 
     int clients[1024];  // max clients
+    char *clients_pseudo[1024];
     int nclients = 0;
+
 
     for (;;) {
         FD_ZERO(&readfds);
@@ -57,8 +98,7 @@ void server_loop(server *serv)
 
         // New connection
         if (FD_ISSET(serv->sock, &readfds)) {
-            clients[nclients] = accept(serv->sock, (struct sockaddr *) &serv->addr, (socklen_t *) &addrlen);
-            ++nclients;
+            add_client(serv, clients, &nclients, clients_pseudo);
 
         // Message from one client
         } else {
@@ -67,17 +107,16 @@ void server_loop(server *serv)
                     message msg;
                     size_t nbytes = receive_message(clients[i], &msg);
 
+                    printf("Message from %s\n", clients_pseudo[i]);
+
                     // Client sent message
                     if (nbytes > 0) {
-                        for (int j = 0; j<nclients; ++j)
-                            send_message(clients[j], &msg);
+                        relay_message(clients, &nclients, clients_pseudo[i], &msg);
                         free(msg.text);
 
                     // Client disconnected, remove it
                     } else {
-                        close(clients[i]);
-                        clients[i] = clients[nclients - 1];
-                        --nclients;
+                        remove_client(clients, &nclients, &i);
                     }
                 }
             }
