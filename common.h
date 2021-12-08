@@ -60,7 +60,7 @@ int receive_message(int sock, message *msg)
     checked(read(sock, &msg->timestamp, sizeof(msg->timestamp)));
 
     // Allocate to receive the message
-    unsigned char* buffer = malloc(nbytes_to_receive);
+    char* buffer = malloc(nbytes_to_receive);
     if (buffer == NULL) {
         fprintf(stderr, "malloc could not allocate %zd bytes", nbytes_to_receive);
         perror("");
@@ -97,7 +97,7 @@ size_t receive(int sock, void** dest)
     };
 
     // Allocate to receive message
-    unsigned char* buffer = malloc(nbytes_to_receive);
+    char* buffer = malloc(nbytes_to_receive);
     if (buffer == NULL) {
         fprintf(stderr, "malloc could not allocate %zd bytes", nbytes_to_receive);
         perror("");
@@ -124,7 +124,7 @@ size_t receive(int sock, void** dest)
  */
 void exit_m(int return_code, char *msg)
 {
-    printf("%s", msg);
+    fprintf(stderr, "%s", msg);
     exit(return_code);
 }
 
