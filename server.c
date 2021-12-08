@@ -1,6 +1,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <string.h>
+#include <signal.h>
 
 #include "common.h"
 
@@ -10,6 +12,14 @@
 /* #include <stdlib.h> */
 /* #include <string.h>  //strlen */
 /* #include <sys/time.h>  //FD_SET, FD_ISSET, FD_ZERO macros */
+
+int sigint_triggered = 0;
+
+void sigint_handler(int receiver_sig)
+{
+    if (receiver_sig == SIGINT)
+        sigint_triggered = 1;
+}
 
 typedef struct {
     int sock;
@@ -43,8 +53,10 @@ int add_client(server * const serv, int * const clist, int * const ccount, char 
     size_t saddrlen = sizeof(serv->addr);
 
     clist[*ccount] = accept(serv->sock, (struct sockaddr *) &serv->addr, (socklen_t *) &saddrlen);
-    checked(receive(clist[*ccount], (void *) &cpseudo[*ccount]));
+    checked(receive(clist[*ccount], (void *) &cpseudo[*ccount]));  // receive the pseudonym
     ++(*ccount);
+
+    printf("%s joined.", cpseudo[*ccount-1]);
 
     return EXIT_SUCCESS;
 }
@@ -52,10 +64,16 @@ int add_client(server * const serv, int * const clist, int * const ccount, char 
 /**
  * @brief Remove a disconnected client
  */
-int remove_client(int * const clist, int * const ccount, int * const index)
+int remove_client(int * const clist, int * const ccount, int * const index, char **cpseudo)
 {
+    printf("%s quit.", cpseudo[*index]);
+
     close(clist[*index]);
+    free(cpseudo[*index]);
+
     clist[*index] = clist[*ccount - 1];
+    cpseudo[*index] = cpseudo[*ccount -1];
+
     --(*ccount);
 
     return EXIT_SUCCESS;
@@ -66,8 +84,36 @@ int remove_client(int * const clist, int * const ccount, int * const index)
  */
 int relay_message(int * const clist, int * const ccount, char *pseudo, message *msg)
 {
-    for (int i=0; i<*ccount; ++i)
+    for (int i=0; i<*ccount; ++i) {
+        ssend(clist[i], (void *) pseudo, strlen(pseudo));
         send_message(clist[i], msg);
+    }
+
+    return EXIT_SUCCESS;
+}
+
+int reset_fd_set(fd_set * const readfds, server * const serv, int * const clist, int * const ccount)
+{
+    FD_ZERO(readfds);
+    FD_SET(serv->sock, readfds);
+
+    int max_fd = serv->sock;
+
+    for (int i = 0; i<*ccount; ++i) {
+        FD_SET(clist[i], readfds);
+        if (clist[i] > max_fd) {
+            max_fd = clist[i];
+        }
+    }
+
+    return max_fd;
+}
+
+int cleanup(int * const clients_list, int * const clients_count, char ** const clients_pseudo)
+{
+    for (int i=0; i<*clients_count; ++i) {
+        remove_client(clients_list, clients_count, &i, clients_pseudo);
+    }
 
     return EXIT_SUCCESS;
 }
@@ -82,22 +128,18 @@ void server_loop(server *serv)
 
 
     for (;;) {
-        FD_ZERO(&readfds);
-        FD_SET(serv->sock, &readfds);
-
-        int max_fd = serv->sock;
-        for (int i = 0; i<nclients; ++i) {
-            FD_SET(clients[i], &readfds);
-            if (clients[i] > max_fd) {
-                max_fd = clients[i];
-            }
-        }
+        int max_fd = reset_fd_set(&readfds, serv, clients, &nclients);
 
         // Wait for activity on one of the sockets
         select(max_fd + 1, &readfds, NULL, NULL, NULL);
 
+        // Ctrl-C triggered
+        if (sigint_triggered) {
+            cleanup(clients, &nclients, clients_pseudo);
+            break;
+
         // New connection
-        if (FD_ISSET(serv->sock, &readfds)) {
+        } else if (FD_ISSET(serv->sock, &readfds)) {
             add_client(serv, clients, &nclients, clients_pseudo);
 
         // Message from one client
@@ -116,7 +158,7 @@ void server_loop(server *serv)
 
                     // Client disconnected, remove it
                     } else {
-                        remove_client(clients, &nclients, &i);
+                        remove_client(clients, &nclients, &i, clients_pseudo);
                     }
                 }
             }
@@ -144,6 +186,8 @@ int main(int argc, char **argv)
 
     server serv;
     server_init(&serv, atoi(argv[1]));
+
+    signal(SIGINT, sigint_handler);
 
     server_loop(&serv);
 
