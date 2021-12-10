@@ -28,7 +28,7 @@ int ssend(int sock, void* data, size_t len) {
     return checked(write(sock, data, len));
 }
 
-typedef struct message {
+typedef struct {
     size_t length;
     time_t timestamp;
     char *text;
