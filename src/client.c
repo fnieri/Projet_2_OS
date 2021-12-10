@@ -67,7 +67,7 @@ void * read_stdin(void * thread_args) {
 
 void send_nickname_to_server(int socket, char* nickname) {
   nickname[strlen(nickname)] = '\0';
-  ssend(socket, nickname, strlen(nickname));
+  ssend(socket, nickname, strlen(nickname)+1);
 }
 
 
@@ -113,7 +113,7 @@ void* read_placeholder(void *thread_args)
             message msg;
             nbytes = receive_message(server_socket, &msg);
             if (nbytes > 0) {
-                printf("Client received %s %s\nfrom %s\n", ctime(&msg.timestamp), msg.text, sender);
+                printf("[%s] [%s] %s\n", ctime(&msg.timestamp), sender, msg.text);
                 free(sender);
                 free(msg.text);
             }
