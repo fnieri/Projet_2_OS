@@ -98,7 +98,32 @@ int client_init(char **argv, struct sockaddr_in *server_address) {
 }
 
 
-void* read_placeholder(void *thread_args) {}
+void* read_placeholder(void *thread_args)
+{
+    thread_args_t *arguments = (thread_args_t *)thread_args;
+    pthread_mutex_t *mutex = arguments->mutex;
+    int server_socket = arguments->server_socket;
+
+    char *sender;
+    ssize_t nbytes = 1;
+
+    for (;;) {
+        nbytes = receive(server_socket, (void *) &sender);
+        if (nbytes > 0) {
+            message msg;
+            nbytes = receive_message(server_socket, &msg);
+            if (nbytes > 0) {
+                printf("Client received %s %s\nfrom %s\n", ctime(&msg.timestamp), msg.text, sender);
+                free(sender);
+                free(msg.text);
+            }
+        } else {
+            break;
+        }
+    }
+
+    return NULL;
+}
 
 void client_loop(int server_socket){
   pthread_t send_thread, receive_thread;
