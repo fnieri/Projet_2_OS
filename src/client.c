@@ -75,6 +75,7 @@ char *ui_get_input(curses_ui *ui, char * buffer, int size)
     echo();
 
     checked(wclear(ui->input_content));
+    checked(wprintw(ui->input_content, "> "));
 
     return buffer;
 }
@@ -99,16 +100,6 @@ int ui_print_message(curses_ui *ui, char *sender, message *msg)
     return EXIT_SUCCESS;
 }
 
-
-message * build_message_struct(size_t buffer_lenght, char* buffer ) {
-  time_t current_time = time(&current_time);
-  message* message_to_build = malloc(sizeof(message));
-  message_to_build->length = buffer_lenght;
-  message_to_build->timestamp = current_time;
-  message_to_build->text = buffer;
-  return message_to_build;
-}
-
 /* @brief Allow user to send messages via stdin
 *
 */
@@ -125,7 +116,6 @@ void * read_stdin(void * thread_args) {
     /* if (fgets(buffer, 1024, stdin) != NULL) { */
       /* wgetstr(arguments->ui->input_content, buffer); */
       if (ui_get_input(arguments->ui, buffer, 1024) != NULL) {
-          wrefresh(arguments->ui->output_content);
 
       //Remove /n
       size_t len = strlen(buffer)+1;
@@ -144,7 +134,9 @@ void * read_stdin(void * thread_args) {
 
     //Ctrl - D BEWARE UNDEFINED BEHAVIOUR FOR NOW, SERVER CONNECTION RESET BY PEER
     else {
-      exit_m(0, "End of connection to server");
+      /* exit_m(0, "End of connection to server"); */
+        endwin();
+        exit(0);
       return NULL;
     }
   }
@@ -188,7 +180,7 @@ int client_init(char **argv, struct sockaddr_in *server_address) {
 void* read_placeholder(void *thread_args)
 {
     thread_args_t *arguments = (thread_args_t *)thread_args;
-    /* pthread_mutex_t *mutex = arguments->mutex; */
+    pthread_mutex_t *mutex = arguments->mutex;
     int server_socket = arguments->server_socket;
 
     char *sender;
@@ -198,9 +190,10 @@ void* read_placeholder(void *thread_args)
         nbytes = receive(server_socket, (void *) &sender);
         if (nbytes > 0) {
             message msg;
+            pthread_mutex_lock(mutex);
             nbytes = receive_message(server_socket, &msg);
+            pthread_mutex_unlock(mutex);
             if (nbytes > 0) {
-                /* printf("[%s] %s %s\n", ctime(&msg.timestamp), sender, msg.text); */
                 ui_print_message(arguments->ui, sender, &msg);
                 free(sender);
                 free(msg.text);
@@ -260,7 +253,7 @@ void check_args(int argc, char **argv)
 int ui_init(curses_ui *ui)
 {
     initscr();  // init main window
-    /* cbreak(); */
+    cbreak();
     /* noecho(); */
 
     ui->output_border = subwin(stdscr, LINES-3, COLS, 0, 0);

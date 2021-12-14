@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>  // close()
+#include <time.h>
 
 // Return values
 const int WRONG_USAGE = 1;
@@ -126,6 +127,16 @@ void exit_m(int return_code, char *msg)
 {
     fprintf(stderr, "%s", msg);
     exit(return_code);
+}
+
+
+message * build_message_struct(size_t buffer_lenght, char* buffer ) {
+    time_t current_time = time(&current_time);
+    message* message_to_build = malloc(sizeof(message));
+    message_to_build->length = buffer_lenght;
+    message_to_build->timestamp = current_time;
+    message_to_build->text = buffer;
+    return message_to_build;
 }
 
 
