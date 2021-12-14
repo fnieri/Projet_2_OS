@@ -143,5 +143,4 @@ message * build_message_struct(size_t buffer_lenght, char* buffer ) {
     return message_to_build;
 }
 
-
 #endif  // __COMMON_H

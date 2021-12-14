@@ -37,7 +37,21 @@ int server_init(server *serv, int port)
     serv->addr.sin_port = htons(port);
 
     checked(bind(serv->sock, (struct sockaddr *)&serv->addr, sizeof(serv->addr)));
-    checked(listen(serv->sock, 3));
+    checked(listen(serv->sock, 1024));
+
+    return EXIT_SUCCESS;
+}
+
+/**
+ * @brief Send message to all clients
+ */
+int relay_message(int *const clist, int *const ccount, char *pseudo, message *msg)
+{
+    for (int i = 0; i < *ccount; ++i) {
+        /* printf("Sending to %s %ld\n", pseudo, strlen(pseudo)+1); */
+        ssend(clist[i], (void *)pseudo, strlen(pseudo) + 1);
+        send_message(clist[i], msg);
+    }
 
     return EXIT_SUCCESS;
 }
@@ -53,9 +67,18 @@ int add_client(server *const serv, int *const clist, int *const ccount, char **c
 
     clist[*ccount] = accept(serv->sock, (struct sockaddr *)&serv->addr, (socklen_t *)&saddrlen);
     checked(receive(clist[*ccount], (void *)&cpseudo[*ccount])); // receive the pseudonym
-    ++(*ccount);
 
-    printf("%s joined.", cpseudo[*ccount - 1]);
+    char buff[1024];
+    sprintf(buff, "%s joined", cpseudo[*ccount]);
+
+    char usrname[] = "Server";
+    size_t len = strlen(buff)+1;
+    message *msg = build_message_struct(len, buff);
+
+    relay_message(clist, ccount, usrname, msg);
+    /* printf("%s joined.", cpseudo[*ccount - 1]); */
+
+    ++(*ccount);
 
     return EXIT_SUCCESS;
 }
@@ -74,20 +97,6 @@ int remove_client(int *const clist, int *const ccount, int *const index, char **
     cpseudo[*index] = cpseudo[*ccount - 1];
 
     --(*ccount);
-
-    return EXIT_SUCCESS;
-}
-
-/**
- * @brief Send message to all clients
- */
-int relay_message(int *const clist, int *const ccount, char *pseudo, message *msg)
-{
-    for (int i = 0; i < *ccount; ++i) {
-        /* printf("Sending to %s %ld\n", pseudo, strlen(pseudo)+1); */
-        ssend(clist[i], (void *)pseudo, strlen(pseudo) + 1);
-        send_message(clist[i], msg);
-    }
 
     return EXIT_SUCCESS;
 }
