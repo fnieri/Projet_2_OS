@@ -1,4 +1,4 @@
-FLAGS = -Wall -Wextra -MMD -pthread
+FLAGS = -Wall -Wextra -MMD -lpthread -lncurses
 
 all : server.out  client.out
 
