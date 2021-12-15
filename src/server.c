@@ -88,15 +88,24 @@ int add_client(server *const serv, int *const clist, int *const ccount, char **c
  */
 int remove_client(int *const clist, int *const ccount, int *const index, char **cpseudo)
 {
-    printf("%s quit.", cpseudo[*index]);
+    char buff[1024];
+    sprintf(buff, "%s quit", cpseudo[*index]);
 
     close(clist[*index]);
     free(cpseudo[*index]);
+
+    char usrname[] = "Server";
+    size_t len = strlen(buff)+1;
+    message *msg = build_message_struct(len, buff);
 
     clist[*index] = clist[*ccount - 1];
     cpseudo[*index] = cpseudo[*ccount - 1];
 
     --(*ccount);
+
+    relay_message(clist, ccount, usrname, msg);
+
+    /* printf("%s quit.", cpseudo[*index]); */
 
     return EXIT_SUCCESS;
 }
