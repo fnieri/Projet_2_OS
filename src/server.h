@@ -6,32 +6,34 @@
 
 #include "common.h"
 
-
-//Structure representing server with socket and address
+// Structure representing server with socket and address
 typedef struct {
     int sock;
     struct sockaddr_in addr;
+    int clients_fd[1024]; // max clients
+    char *clients_pseudo[1024];
+    int clients_count;
 } server;
 
 void sigint_handler(int receiver_sig);
 
 /**
- * @brief Initialize server with socket, address and port    
+ * @brief Initialize server with socket, address and port
  */
-int server_init(server *serv, int port);
+int server_init(server *serv, unsigned short port);
 
 /**
  * @brief Add a client to client list and its username to username client list
- * 
+ *
  */
-int add_client(server *const serv, int *const clist, int *const ccount, char **cpseudo);
+int add_client(server *const serv);
 
 /**
  * @brief Remove a disconnected client
  */
-int remove_client(int *const clist, int *const ccount, int *const index, char **cpseudo);
+int remove_client(server *const serv, int idx);
 
 /**
  * @brief Send message to all clients
  */
-int relay_message(int *const clist, int *const ccount, char *pseudo, message *msg);
+int relay_message(server *const serv, char *const pseudo, message *msg);
