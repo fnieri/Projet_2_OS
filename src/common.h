@@ -4,9 +4,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>  // close()
+#include <time.h>
 
 // Return values
 const int WRONG_USAGE = 1;
+
+// Return values
 
 int _checked(int ret, char* calling_function) {
   if (ret < 0) {
@@ -89,6 +92,7 @@ int receive_message(int sock, message *msg)
  */
 size_t receive(int sock, void** dest)
 {
+   
     size_t nbytes_to_receive;
 
     // Whether the connection was closed
@@ -99,6 +103,7 @@ size_t receive(int sock, void** dest)
     // Allocate to receive message
     char* buffer = malloc(nbytes_to_receive);
     if (buffer == NULL) {
+
         fprintf(stderr, "malloc could not allocate %zd bytes", nbytes_to_receive);
         perror("");
         exit(1);
@@ -126,6 +131,16 @@ void exit_m(int return_code, char *msg)
 {
     fprintf(stderr, "%s", msg);
     exit(return_code);
+}
+
+
+message * build_message_struct(size_t buffer_lenght, char* buffer ) {
+    time_t current_time = time(&current_time);
+    message* message_to_build = malloc(sizeof(message));
+    message_to_build->length = buffer_lenght;
+    message_to_build->timestamp = current_time;
+    message_to_build->text = buffer;
+    return message_to_build;
 }
 
 
