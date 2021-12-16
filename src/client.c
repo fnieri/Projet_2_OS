@@ -99,16 +99,6 @@ int ui_print_message(curses_ui *ui, char *sender, message *msg)
     return EXIT_SUCCESS;
 }
 
-
-message * build_message_struct(size_t buffer_lenght, char* buffer ) {
-  time_t current_time = time(&current_time);
-  message* message_to_build = malloc(sizeof(message));
-  message_to_build->length = buffer_lenght;
-  message_to_build->timestamp = current_time;
-  message_to_build->text = buffer;
-  return message_to_build;
-}
-
 /* @brief Allow user to send messages via stdin
 *
 */
