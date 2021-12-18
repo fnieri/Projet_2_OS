@@ -1,5 +1,6 @@
 #include "common.h"
-#include "string.h"
+
+#include <string.h>
 #include <arpa/inet.h>
 #include <ncurses.h>
 #include <pthread.h>

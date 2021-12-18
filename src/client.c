@@ -185,7 +185,7 @@ int client_init(char **argv, struct sockaddr_in *server_address)
     return server_socket;
 }
 
-void *read_stdout(void *thread_args)
+void *receive_other_users_messages(void *thread_args)
 {
     thread_args_t *arguments = (thread_args_t *)thread_args;
     pthread_mutex_t *mutex = arguments->mutex;
@@ -220,7 +220,7 @@ void client_loop(curses_ui *ui, int server_socket)
 
     // Iniitalize threaded functions
     void *(*send_function)(void *) = read_stdin;
-    void *(*receive_function)(void *) = read_stdout;
+    void *(*receive_function)(void *) = receive_other_users_messages;
 
     // Create thread arguments
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
