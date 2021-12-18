@@ -8,8 +8,8 @@ partout et jusqu'à récemment leur fonctionnement était pour
 nous une boîte noire. C'est ce que nous avons voulu changer
 avec ce projet de \emph{ChatBox}.
 
-Ce que nous avons réalisé n'est que la première
-étape, mais la plus importante.
+Ce que nous avons réalisé n'est qu'une étape parmi tant d'autres,
+mais la plus fondamentale.
 
 \section{Côté serveur}
 
@@ -28,14 +28,16 @@ de l'auteur.
 
 En effet, le serveur sait de quel client vient le message et
 donc connait le pseudonyme utilisé par ce dernier (fourni
-lors de la connexion). Nous avons donc pas besoin de
+lors de la connexion). Nous n'avons donc pas besoin de
 communiquer l'auteur à chaque envoi depuis un client.
 
 D'un autre côté, cela complique le programme dans le sens où
-deux fonctions différentes doivent être faites, une pour
+deux fonctions différentes doivent être faites. Une pour
 envoyer le message sans l'auteur depuis le client et une
 pour relayer le message avec l'auteur depuis le serveur.
-Mais nous avons tout de même décidé de suivre cette voie.
+Mais nous avons tout de même décidé de suivre cette voie
+pour des raisons de performance (même si la différence
+ne doit être que minime).
 
 \subsection{Structure du serveur}
 
@@ -53,7 +55,7 @@ Vient ensuite la deuxième phase, également divisée en deux
 sous-parties. Nous avons d'abord celle qui détermine le
 client qui fait une requête et ensuite celle qui exécute la requête
 en tant que telle. Les requêtes peuvent être de deux types :
-des demandes de connexion/déconnexion et les envois des
+les demandes de connexion/déconnexion et les envois des
 messages.
 
 La section déterminant le client ayant fait une requête est
@@ -71,4 +73,12 @@ Si par contre l'activité provient du descripteur du serveur,
 c'est que nous nous trouvons face à une demande de connexion de la
 part d'un client. Il est ajouté et l'écoute continue.
 
+Dans les situations de connexion et de déconnexion d'un
+client, le serveur en informe les autres participants participants
+grâce à un message ayant comme auteur \verb@Serveur@.
 
+\subsection{Traitement des signaux}
+
+La terminaison du serveur a lieu lors d'une réception du
+signal \verb@SIGINT@. Cette dernière quitte simplement le
+programme avec un message affiché à l'écran.
