@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <unistd.h>  // close()
 #include <time.h>
+#include <errno.h>
 
 // Return values
 const int WRONG_USAGE = 1;
@@ -39,12 +40,18 @@ typedef struct {
 
 /**
  * @brief Send message
+ *
+ * Return:
+ *  If successful, the number of bytes sent. Otherwise
+ *  -1 in case of an error.
  */
 int send_message(int sock, message *msg)
 {
-    checked(write(sock, &msg->length, sizeof(msg->length)));
-    checked(write(sock, &msg->timestamp, sizeof(msg->timestamp)));
-    return checked(write(sock, msg->text, msg->length));
+    int total = 0;
+    total += write(sock, &msg->length, sizeof(msg->length));
+    total += write(sock, &msg->timestamp, sizeof(msg->timestamp));
+    total += write(sock, msg->text, msg->length);
+    return errno == EPIPE ? -1 : total;
 }
 
 /**
