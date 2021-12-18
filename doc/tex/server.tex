@@ -1,0 +1,84 @@
+\section{Introduction}
+
+Depuis maintenant plusieurs années, les applications de
+communication \emph{via} Internet se sont intégrées dans notre
+quotidien. Que ce soit dans le milieu professionnel ou non,
+utilisées avec de bonnes intentions ou non, elles sont
+partout et jusqu'à récemment leur fonctionnement était pour
+nous une boîte noire. C'est ce que nous avons voulu changer
+avec ce projet de \emph{ChatBox}.
+
+Ce que nous avons réalisé n'est qu'une étape parmi tant d'autres,
+mais la plus fondamentale.
+
+\section{Côté serveur}
+
+La partie centrale de tout service de communication est
+évidemment celle qui relaie les communications d'un individu
+à l'autre. Nous allons l'appeler \emph{serveur}.
+
+\subsection{Format des messages}
+
+Pour notre application, les communications se limitent aux
+messages écrits. Ainsi chaque message se compose de l'heure
+d'envoi, de son auteur et d'un texte.
+Il était donc logique de tout mettre dans une
+\verb@struct@, ce que nous avons fait à l'exception
+de l'auteur.
+
+En effet, le serveur sait de quel client vient le message et
+donc connait le pseudonyme utilisé par ce dernier (fourni
+lors de la connexion). Nous n'avons donc pas besoin de
+communiquer l'auteur à chaque envoi depuis un client.
+
+D'un autre côté, cela complique le programme dans le sens où
+deux fonctions différentes doivent être faites. Une pour
+envoyer le message sans l'auteur depuis le client et une
+pour relayer le message avec l'auteur depuis le serveur.
+Mais nous avons tout de même décidé de suivre cette voie
+pour des raisons de performance (même si la différence
+ne doit être que minime).
+
+\subsection{Structure du serveur}
+
+Pour ce qui est du fonctionnement du serveur,
+nous avons décidé de diviser l'exécutions en deux phases
+principales, l'initialisation et le \emph{main loop}.
+
+La première permet la création de l'entité serveur. Cela
+inclut l'ouverture d'un socket, la liaison de ce dernier à
+un port du système et la création de la liste de clients et du
+compteur de clients. Cette phase se termine par la mise en
+écoute dudit port par le serveur.
+
+Vient ensuite la deuxième phase, également divisée en deux
+sous-parties. Nous avons d'abord celle qui détermine le
+client qui fait une requête et ensuite celle qui exécute la requête
+en tant que telle. Les requêtes peuvent être de deux types :
+les demandes de connexion/déconnexion et les envois des
+messages.
+
+La section déterminant le client ayant fait une requête est
+réalisée grâce à l'appel système bloquant \verb@select@ qui permet de
+mettre en écoute plusieurs descripteurs de fichiers (dans
+notre cas ceux des clients) et de reprendre l'exécution dès
+qu'il y a une activité provenant d'un de ces derniers.
+
+Lorsque l'activité provient d'un client, ce ne peut être
+qu'un envoi de message (ou une demande de déconnexion, qui
+est en réalité un envoi d'un message vide). Dans ce cas, le
+message est relayé à tous les clients.
+
+Si par contre l'activité provient du descripteur du serveur,
+c'est que nous nous trouvons face à une demande de connexion de la
+part d'un client. Il est ajouté et l'écoute continue.
+
+Dans les situations de connexion et de déconnexion d'un
+client, le serveur en informe les autres participants participants
+grâce à un message ayant comme auteur \verb@Serveur@.
+
+\subsection{Traitement des signaux}
+
+La terminaison du serveur a lieu lors d'une réception du
+signal \verb@SIGINT@. Cette dernière quitte simplement le
+programme avec un message affiché à l'écran.

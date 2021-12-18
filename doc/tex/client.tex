@@ -1,87 +1,111 @@
-\documentclass[11pt]{article}
-\usepackage[utf8]{inputenc}
-\usepackage{multirow}
-\usepackage[margin=3cm]{geometry}
-\newlength{\tabcont}
-\setlength{\parindent}{0.0in}
-\setlength{\parskip}{0.05in}
-\parindent 0in
-\parskip 12pt
-\geometry{margin=1in, headsep=0.25in}
+\section{Côté client}
 
-\begin{document}
-    \section{Client}
-    La partie client combine ce qui est réception est connexion au server,
-    envoi d'un message par l'utilisateur, et interface graphique, 
-    réalisée en utilisant ncurses.
-        \subsection{Connexion}
-        Lorsque l'utlisateur lance le programme via la commande \\
-        \texttt{\$ ./client <pseudo> <ip\_server> <port> }, le programme établit une 
-        connexion avec le server.
-        Nous créeons un socket de type SOCK\_STREAM pour pouvoir communiquer entre
-        plusieurs utilisateurs, et connectons l'utilisateur au server caracterisé 
-        par l'IP et par le port introduits,
-        le premier message est envoyé automatiquement et contient l'username.
-        Si le processus échoue, le programme s'arrete avec un message d'erreur.
-        Le socket crée pendant la connexion sera reutilisé pour envoyer et recevoir les messages.
-        \subsection{Transmission des messages}
-            L'envoi et la réception des messages s'effectue en concurrence,
-            grâce à l'utilisation des threads et l'exclusion mutuelle avec les mutex.
-            \subsubsection{Envoi des messages}
-                L'envoi des messages se fait à travers une fonction auxiliaire
-                \texttt{ui\_get\_input} et la fonction qui envoi les messages
-                au server \texttt{read\_stdin}.
+La partie client combine ce qui est connexion au serveur,
+envoi et réception d'un message et interface graphique,
+réalisée en utilisant \emph{ncurses}.
 
-                \texttt{read\_stdin} appelle la fonction auxiliaire,
-                qui lit l'input du client dans l'interface
-                caractère par caractère, quand l'utilisateur souhaite 
-                envoyer le message en appuyant sur Enter, l'input est analysé
-                pour en trouver la longueur, nous prenons le timestamp et  
-                construisons la structure \textbf{message} suivante:
-                
-                \begin{center}        
+\subsection{Structure du client}
 
-                    \begin{tabular}{ |p{4cm}|p{1cm}| }
-                        \hline
-                        \multicolumn{2}{|c|}{\textbf{message}} \\
-                        
-                        \hline
-                        Champ & Type\\
-                        
-                        \hline
-                        Longueur du message & size\_t\\
-                        Timestamp & time\_t\\
-                        Message & char*\\
-                        \hline
+Le client, tout comme le serveur, divise son exécution
+en deux phases, l'initialisation et le \emph{main loop}.
 
-                    \end{tabular}
-                \end{center}
-                
-                Ensuite, la structure est envoyée au server, qui relaye le message
-                aux autres utilisateurs (cfr. section ???) , il est important que
-                l'envoi d'un message ne soit pas perturbé par la réception d'un autre en même temps.
-                Pour éviter cela, les mutex assurent que l'unique traitement effectué à ce moment soit
-                l'envoi du message.
+\subsection{Initialisation}
 
-            \subsubsection{Réception du message}
-                Comme l'envoi, la réception se divise en deux partie, une relié à 
-                l'interface, une relié à la vérification avec le server.
-            
-                La réception du message dans la fonction \texttt{receive\_other\_users\_messages}
-                consiste à vérifier si des bytes ont été reçu sur le socket,
-                 si c'est bien le cas, le message est interprété par le client et est ensuite 
-                affiché sur l'interface avec la fonction \texttt{ui\_print\_message} selon le schéma suivant: \\
-                \begin{center}
-                    \textit{HH:MM:SS [username] message} 
-                \end{center}
-                Comme pour l'envoi des messages, il est aussi important que
-                la réception d'un \textbf{message}, et non pas la vérification de la réception de \textbf{bytes},
-                soit la seule opération en cours de traitement. Si le "lock" d'un mutex
-                est effectué au niveau de la réception de bytes, l'utilisateur ne pourrait jamais
-                envoyer des messages.
-                
-        \section{Limitations}
-            Si à l'envoi d'un nouveau message, des messages anciens sont effacés du chatbox,
-            il n'est plus possible de les lire pour des limitations dûes au fait que tous les messages
-            devraient etre stockés sur un fichier à part.
-\end{document}  
+Lorsque l'utilisateur lance le programme via la commande
+\begin{center}
+    \texttt{\$ ./client <pseudo> <ip\_serveur> <port>}
+\end{center}
+
+le programme établit une
+connexion avec le serveur.
+Nous créons un socket de type \verb@SOCK_STREAM@ pour pouvoir communiquer entre
+plusieurs utilisateurs, et connectons l'utilisateur au serveur caractérisé
+par l'IP et par le port introduits.
+Le premier message est envoyé automatiquement et contient l'username.
+Si la connexion échoue, le programme s'arrête avec un message d'erreur.
+Le socket créé pendant la connexion sera réutilisé pour envoyer et recevoir les messages.
+\subsection{Main loop}
+L'envoi et la réception des messages s'effectue en concurrence dans le \emph{main loop},
+grâce à l'utilisation des threads et l'exclusion mutuelle avec les mutex.
+\subsubsection{Envoi des messages}
+L'envoi des messages se fait à travers une fonction auxiliaire
+\texttt{ui\_get\_input} et la fonction qui envoie les messages
+au serveur \texttt{read\_stdin}.
+
+\texttt{read\_stdin} appelle la fonction auxiliaire,
+qui lit l'input du client dans l'interface
+caractère par caractère. Quand l'utilisateur souhaite
+envoyer le message en appuyant sur la touche \verb@Entrée@, l'input est analysé
+pour en trouver la longueur, nous prenons le timestamp et
+construisons le \verb@struct@ \textbf{message} (cfr. section 2.1).
+
+Ensuite, la structure est envoyée au serveur, qui relaie le message contenu
+aux autres utilisateurs (cfr. section 2.3) , il est important que
+l'envoi d'un message ne soit pas perturbé par la réception d'un autre en même temps.
+Pour éviter cela, le mutex assure que l'unique traitement effectué à ce moment
+dans le programme soit l'envoi du message.
+
+\subsubsection{Réception du message}
+Comme l'envoi, la réception se divise en deux parties. Une reliée à
+l'interface et une reliée à la vérification avec le serveur.
+
+La réception du message dans la fonction \texttt{receive\_other\_users\_messages}
+consiste à vérifier si des bytes ont été reçu sur le socket,
+si c'est bien le cas, le message est interprété par le client et est ensuite
+affiché sur l'interface avec la fonction \texttt{ui\_print\_message} selon le schéma suivant: \\
+\begin{center}
+    \textit{HH:MM:SS [\textbf{username}] message}
+\end{center}
+Comme pour l'envoi des messages, il est aussi important que
+la réception d'un \textbf{message}, et non pas la vérification de la réception de \textbf{bytes},
+soit la seule opération en cours de traitement. Si le "lock" d'un mutex
+est effectué au niveau de la réception de bytes, l'utilisateur ne pourrait jamais
+envoyer des messages.
+
+\subsection{Traitement des signaux}
+
+La terminaison du programme client peut être causée par deux
+évènements. Soit la connexion avec le serveur a été
+interrompue, soit l'utilisateur a fourni le caractère EOT
+(\verb@Ctrl-D@) avec un champs de message vide
+(ce qui équivaut dans notre programme à un EOF).
+
+Lors du premier cas, cela va être vu par le client
+lorsqu'il va essayer d'envoyer un message
+et se rendre compte que le socket de lecture du serveur a
+été fermé. Cette écriture sans succès est généralement
+accompagnée par le signal \verb@SIGPIPE@ qui normalement
+devrait mettre fin à notre programme.
+
+Cependant, nous
+voulons d'abord mettre fin à \emph{ncurses} et afficher un
+message utile à l'utilisateur. C'est pourquoi nous avons
+décidé d'ignorer ce signal et agir en conséquence grâce à la
+variable \verb@errno@ qui contient la valeur \verb@EPIPE@
+lors d'une écriture infructueuse.
+
+
+\section{Difficultés}
+
+Nous avons eu des problèmes avec l'envoi des chaînes de
+caractères à cause de l'omission du \verb@\0@ terminal.
+L'absence de ce dernier caractère résultait en des envois de strings
+qui n'était pas lisibles à l'arrivée puisque non délimités.
+
+Un autre problème que nous avons eu est l'utilisation de
+mutexes pour l'interface graphique. En effet, la réception
+de caractères et la mise à jour de l'interface doivent être
+deux actions séparées. Cependant, en utilisant des mutexes,
+la séparation fonctionnait mais la mise à jour n'était pas
+instantanée. C'est pourquoi nous avons décidé de ne pas les
+utiliser pour l'interface, préférant une mise à jour (de
+l'écran) depuis la demande d'input. Ce n'est pas idéal mais
+dans notre cas, la solution la plus fluide.
+
+\section{Limitations}
+Si à l'envoi d'un nouveau message, d'anciens messages sont effacés de l'écran,
+il ne sera plus possible de les lire pour des limitations dues au fait que tous les messages
+devraient être stockés sur un fichier à part.
+
+\section{Exemple d'execution}
+\addimg{img/exemple.png}{width=\textwidth}{Ceci est un exemple d'execution}{exemple}
