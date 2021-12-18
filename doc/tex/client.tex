@@ -1,75 +1,49 @@
-\documentclass[11pt]{article}
-\usepackage[utf8]{inputenc}
-\usepackage{multirow}
-\usepackage[margin=3cm]{geometry}
-\newlength{\tabcont}
-\setlength{\parindent}{0.0in}
-\setlength{\parskip}{0.05in}
-\parindent 0in
-\parskip 12pt
-\geometry{margin=1in, headsep=0.25in}
 
-\begin{document}
-    \section{Client}
-    La partie client combine ce qui est réception est connexion au server,
-    envoi d'un message par l'utilisateur, et interface graphique, 
+\section{Côté client}
+    La partie client combine ce qui est connexion au serveur,
+    envoi et réception d'un message et interface graphique, 
     réalisée en utilisant ncurses.
-        \subsection{Connexion}
-        Lorsque l'utlisateur lance le programme via la commande \\
-        \texttt{\$ ./client <pseudo> <ip\_server> <port> }, le programme établit une 
-        connexion avec le server.
-        Nous créeons un socket de type SOCK\_STREAM pour pouvoir communiquer entre
-        plusieurs utilisateurs, et connectons l'utilisateur au server caracterisé 
+        \subsection{Structure du client}
+        Le client, tout comme le serveur, divise son exécution
+        en deux phases, l'initialisation et le \emph{main loop}.
+        \subsection{Initialisation}
+        Lorsque l'utilisateur lance le programme via la commande \\
+        \texttt{\$ ./client <pseudo> <ip\_serveur> <port> }, le programme établit une 
+        connexion avec le serveur.
+        Nous créons un socket de type SOCK\_STREAM pour pouvoir communiquer entre
+        plusieurs utilisateurs, et connectons l'utilisateur au serveur caracterisé 
         par l'IP et par le port introduits,
         le premier message est envoyé automatiquement et contient l'username.
-        Si le processus échoue, le programme s'arrete avec un message d'erreur.
-        Le socket crée pendant la connexion sera reutilisé pour envoyer et recevoir les messages.
-        \subsection{Transmission des messages}
-            L'envoi et la réception des messages s'effectue en concurrence,
+        Si la connexion échoue, le programme s'arrête avec un message d'erreur.
+        Le socket crée pendant la connexion sera réutilisé pour envoyer et recevoir les messages.
+        \subsection{Main loop}
+            L'envoi et la réception des messages s'effectue en concurrence dans le main loop,
             grâce à l'utilisation des threads et l'exclusion mutuelle avec les mutex.
             \subsubsection{Envoi des messages}
                 L'envoi des messages se fait à travers une fonction auxiliaire
                 \texttt{ui\_get\_input} et la fonction qui envoi les messages
-                au server \texttt{read\_stdin}.
+                au serveur \texttt{read\_stdin}.
 
                 \texttt{read\_stdin} appelle la fonction auxiliaire,
                 qui lit l'input du client dans l'interface
                 caractère par caractère, quand l'utilisateur souhaite 
                 envoyer le message en appuyant sur Enter, l'input est analysé
                 pour en trouver la longueur, nous prenons le timestamp et  
-                construisons la structure \textbf{message} suivante:
+                construisons le \verb@struct@ \textbf{message} (cfr. section 2.1).
                 
-                \begin{center}        
-
-                    \begin{tabular}{ |p{4cm}|p{1cm}| }
-                        \hline
-                        \multicolumn{2}{|c|}{\textbf{message}} \\
-                        
-                        \hline
-                        Champ & Type\\
-                        
-                        \hline
-                        Longueur du message & size\_t\\
-                        Timestamp & time\_t\\
-                        Message & char*\\
-                        \hline
-
-                    \end{tabular}
-                \end{center}
-                
-                Ensuite, la structure est envoyée au server, qui relaye le message
-                aux autres utilisateurs (cfr. section ???) , il est important que
+                Ensuite, la structure est envoyée au serveur, qui relaie le message contenu
+                aux autres utilisateurs (cfr. section 2.3) , il est important que
                 l'envoi d'un message ne soit pas perturbé par la réception d'un autre en même temps.
-                Pour éviter cela, les mutex assurent que l'unique traitement effectué à ce moment soit
-                l'envoi du message.
+                Pour éviter cela, le mutex assure que l'unique traitement effectué à ce moment 
+                dans le programme soit l'envoi du message.
 
             \subsubsection{Réception du message}
                 Comme l'envoi, la réception se divise en deux partie, une relié à 
-                l'interface, une relié à la vérification avec le server.
-            
+                l'interface, une relié à la vérification avec le serveur.
+                
                 La réception du message dans la fonction \texttt{receive\_other\_users\_messages}
                 consiste à vérifier si des bytes ont été reçu sur le socket,
-                 si c'est bien le cas, le message est interprété par le client et est ensuite 
+                si c'est bien le cas, le message est interprété par le client et est ensuite 
                 affiché sur l'interface avec la fonction \texttt{ui\_print\_message} selon le schéma suivant: \\
                 \begin{center}
                     \textit{HH:MM:SS [username] message} 
@@ -80,8 +54,19 @@
                 est effectué au niveau de la réception de bytes, l'utilisateur ne pourrait jamais
                 envoyer des messages.
                 
+        \section{Difficultés}
+
+        Nous avons eu des problèmes avec l'envoi des chaînes de
+        caractères à cause de l'omission du \verb@\0@ terminal.
+        L'absence de ce dernier caractère résultait en des envois de strings
+        qui n'était pas lisibles à l'arrivée puisque non délimités.
+                
+                
+
         \section{Limitations}
             Si à l'envoi d'un nouveau message, des messages anciens sont effacés du chatbox,
-            il n'est plus possible de les lire pour des limitations dûes au fait que tous les messages
-            devraient etre stockés sur un fichier à part.
-\end{document}  
+            il ne sera plus possible de les lire pour des limitations dues au fait que tous les messages
+            devraient être stockés sur un fichier à part.
+        
+        \section{Exemple d'execution}
+                \addimg{img/exemple.png}{width=\textwidth}{Ceci est un exemple d'execution}{exemple}
