@@ -8,12 +8,10 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
-int sigint_triggered = 0;
-
 void sigint_handler(int receiver_sig)
 {
     if (receiver_sig == SIGINT)
-        sigint_triggered = 1;
+        exit_m(0, "Terminating server.\n");
 }
 
 int server_init(server *serv, unsigned short port)
@@ -126,15 +124,6 @@ int reset_fd_set(server *const serv, fd_set *const readfds)
     return max_fd;
 }
 
-int cleanup(server *const serv)
-{
-    for (int i = 0; i < serv->clients_count; ++i) {
-        remove_client(serv, i);
-    }
-
-    return EXIT_SUCCESS;
-}
-
 void server_loop(server *serv)
 {
     fd_set readfds;
@@ -145,13 +134,8 @@ void server_loop(server *serv)
         // Wait for activity on one of the sockets
         select(max_fd + 1, &readfds, NULL, NULL, NULL);
 
-        // Ctrl-C triggered
-        if (sigint_triggered) {
-            cleanup(serv);
-            break;
-
             // New connection
-        } else if (FD_ISSET(serv->sock, &readfds)) {
+        if (FD_ISSET(serv->sock, &readfds)) {
             add_client(serv);
 
             // Message from one client

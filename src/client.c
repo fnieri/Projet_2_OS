@@ -134,13 +134,18 @@ void *read_stdin(void *thread_args)
             nbytes = send_message(server_socket, new_message);
             pthread_mutex_unlock(mutex);
 
+            // Connection with server was lost
+            if (nbytes == -1) {
+                endwin();
+                exit_m(0, "Lost connection with the server.\n");
+            }
+
             free(new_message);
         }
 
         else {
             endwin();
-            exit(0);
-            return NULL;
+            exit_m(0, "Successful deconnection.\n");
         }
     }
     return NULL;
@@ -256,6 +261,10 @@ int main(int argc, char **argv)
 
     curses_ui ui;
     ui_init(&ui);
+
+    // Disable ending the program when the server
+    // is dead and a write is unsuccessful.
+    signal(SIGPIPE, SIG_IGN);
 
     client_loop(&ui, server_socket);
     endwin();
